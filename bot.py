@@ -242,7 +242,9 @@ async def main():
     me = await client.get_me()
     State.my_user_id = me.id
     logger.info(f"Bot started! User ID: {State.my_user_id}")
-    # asyncio.create_task(self_ping())
+    
+    asyncio.create_task(self_ping())
+    
     await client.run_until_disconnected()
 
 if __name__ == "__main__":
