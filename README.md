@@ -53,7 +53,7 @@ GAME_BOT_ID = 1147621126    # ID игрового бота (@igravgorodabot)
 Если возникают проблемы с кодировкой:  
 [Конвертер в UTF-8](https://subtitletools.com/convert-text-files-to-utf8-online)
 
-**Формат файла cities.txt:**
+**Формат файла cities.txt:**\
 москва\
 санкт-петербург\
 нью-йорк\
