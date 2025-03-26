@@ -26,7 +26,7 @@ async def create_session(session_file: str):
 
 async def main():
     # Создаем сессию для тестов
-    # await create_session('telethon_session.session')
+    await create_session('telethon_session.session')
     
     # Создаем сессию для сервера
     await create_session('server_telethon_session.session')
