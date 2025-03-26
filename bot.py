@@ -1,4 +1,5 @@
-# «Автоматический бот для игры в города в Telegram»
+# «Telegram-Cities-Game-Automation»
+# Автоматизированный соперник для игры "Города", работающий через ваш Telegram-аккаунт.
 
 # ДО ЗАПУСКА БОТА:
 # RENDER_APP_URL в config.py
