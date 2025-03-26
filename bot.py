@@ -56,7 +56,7 @@ logger.setLevel(logging.INFO)
 load_dotenv()
 
 # Конфигурация
-SESSION_STRING = os.getenv("SESSION_STRING_TELETHON")
+SESSION_STRING = os.getenv("SESSION_STRING_SERVER")
 API_ID = config.API_ID
 API_HASH = config.API_HASH
 
@@ -75,7 +75,7 @@ GAME_BOT_ID = 1147621126       # ID игрового бота (@igravgorodabot)
 
 # Состояние бота
 class State:
-    is_active = True
+    is_active = False
     used_cities = set()
     current_letter = None
     last_city = None
