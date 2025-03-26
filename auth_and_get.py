@@ -6,7 +6,7 @@ import config
 # Укажите ваши данные API
 API_ID = config.API_ID
 API_HASH = config.API_HASH
-PHONE_NUMBER = ""  # Ваш номер телефона
+PHONE_NUMBER = ""  # Номер аккаунта телеграм
 
 async def create_session(session_file: str):
     # Создаем клиента с новой сессией (используем StringSession для генерации строки)
