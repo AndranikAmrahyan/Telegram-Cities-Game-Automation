@@ -12,6 +12,7 @@ RENDER_APP_URL = "ваш-рендер-проект.onrender.com"  # Для са�
 ```python
 # Для сервера:
 SESSION_STRING = os.getenv("SESSION_STRING_SERVER")
+
 # Для локального запуска:
 SESSION_STRING = os.getenv("SESSION_STRING_TELETHON")
 ```
