@@ -9,4 +9,4 @@ API_ID = int(os.getenv("API_ID"))  # Твой API ID
 API_HASH = os.getenv("API_HASH")  # Твой API HASH
 
 # Сервер на Render
-RENDER_APP_URL = "https://your_render_app.onrender.com"
+RENDER_APP_URL = "https://your_app.onrender.com"
