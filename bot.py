@@ -146,6 +146,9 @@ async def save_new_city(city: str):
             with open(CITIES_FILE, 'a', encoding='utf-8') as f:
                 f.write(normalized + '\n')
             State.discovered_cities.add(normalized)
+
+            # Добавляем город в использованные
+            State.used_cities.add(normalized)
             
             # Обновляем State.cities
             first_letter = normalized[0].upper()
