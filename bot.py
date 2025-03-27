@@ -205,10 +205,6 @@ async def send_next_city(chat_id):
             await client.send_message(chat_id, '/stop@igravgorodabot', reply_to=TOPIC_ID)
             await asyncio.sleep(1)
             await client.send_message(chat_id, '/start@igravgorodabot', reply_to=TOPIC_ID)
-            
-            State.used_cities.clear()
-            State.current_letter = None
-            State.last_city = None
         else:
             logger.info("🔇 Режим 'спокойно': не перезапускаем игру")
 
