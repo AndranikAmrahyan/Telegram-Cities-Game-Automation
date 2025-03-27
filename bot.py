@@ -127,9 +127,6 @@ async def self_ping():
     chats=CHAT_ID
 ))
 async def game_handler(event):
-    if not State.is_active:
-        return
-
     text = event.raw_text
     logger.info(f"Received message: {text}")
 
@@ -146,11 +143,17 @@ async def game_handler(event):
         State.current_letter = None
         State.last_city = None
         logger.info("🔄 Сброс состояния для новой игры")
+
+        if not State.is_active:
+            return
         
         letter_match = re.search(r'на букву "([А-Яа-я])"', text)
         if letter_match:
             State.current_letter = letter_match.group(1).upper()
             await send_next_city(event.chat_id)
+        return
+
+    if not State.is_active:
         return
 
     # Обработка ошибок с обновлением буквы
