@@ -150,10 +150,6 @@ async def save_new_city(city: str):
             with open(CITIES_FILE, 'a', encoding='utf-8') as f:
                 f.write(normalized + '\n')
             State.discovered_cities.add(normalized)
-
-            # Проверяем количество новых городов перед сортировкой
-            if len(State.discovered_cities) % 100 == 0:
-                rewrite_cities_sorted()
             
             # Добавляем город в использованные
             State.used_cities.add(normalized)
@@ -164,7 +160,10 @@ async def save_new_city(city: str):
                 State.cities[first_letter] = set()
             State.cities[first_letter].add(normalized)
             logger.info(f"✅ Добавлен новый город: {normalized}")
-            
+
+            # Проверяем количество новых городов перед сортировкой
+            if len(State.discovered_cities) % 100 == 0:
+                rewrite_cities_sorted()
         except Exception as e:
             logger.error(f"Ошибка сохранения города: {str(e)}")
 
@@ -282,7 +281,8 @@ def rewrite_cities_sorted():
         
         with open(CITIES_FILE, 'w', encoding='utf-8') as f:
             f.write('\n'.join(sorted_cities))
-            
+
+        load_cities()  # Перезагружаем данные из файла
         logger.info("🔁 Файл городов успешно перезаписан в отсортированном виде")
     except Exception as e:
         logger.error(f"Ошибка сортировки файла: {str(e)}")
