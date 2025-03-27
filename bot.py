@@ -282,11 +282,14 @@ async def daily_report():
         
         try:
             if os.path.exists(CITIES_FILE):
+                total = len(State.discovered_cities)
                 await client.send_file(
                     entity=REPORT_CHAT_ID,
                     file=CITIES_FILE,
-                    caption=f"📅 Ежедневный отчет городов ({datetime.now().strftime('%d.%m.%Y')})",
-                    allow_cache=False
+                    caption=f"📅 Ежедневный отчет городов ({datetime.now().strftime('%d.%m.%Y')})\n"
+                            f"📊 Всего в базе: {total} городов",
+                    allow_cache=False,
+                    silent=True
                 )
                 logger.info("📤 Отчет успешно отправлен")
         except Exception as e:
