@@ -18,6 +18,8 @@ from flask import Flask
 import threading
 import aiohttp
 import config
+from datetime import datetime, timedelta
+import pytz
 
 # Фильтрация лишних логов
 class OutputFilter:
@@ -74,6 +76,10 @@ CHAT_ID = -1002157100033       # ID основного чата (https://t.me/Fa
 TOPIC_ID = 266173              # ID темы/ветки чата (https://t.me/Family_Worlds/266173)
 GAME_BOT_ID = 1147621126       # ID игрового бота (@igravgorodabot)
 
+CITIES_FILE = 'cities.txt'
+REPORT_CHAT_ID = -1002571801416  # ID группы для отчетов
+MOSCOW_TZ = pytz.timezone('Europe/Moscow')
+
 # Состояние бота
 class State:
     is_active = False
@@ -81,18 +87,26 @@ class State:
     current_letter = None
     last_city = None
     cities = {}
+    discovered_cities = set()
     mode = "спокойно"  # "спидран" | "спокойно"
     my_user_id = None
 
 # Загрузка городов из файла
 def load_cities():
-    with open('cities.txt', 'r', encoding='utf-8') as f:
-        for city in f.readlines():
-            city = city.strip().lower()
-            first_letter = city[0].upper()
-            if first_letter not in State.cities:
-                State.cities[first_letter] = []
-            State.cities[first_letter].append(city)
+    State.cities.clear()
+    try:
+        with open(CITIES_FILE, 'r+', encoding='utf-8') as f:
+            existing = {line.strip().lower() for line in f.readlines()}
+            State.discovered_cities = existing.copy()
+            
+            for city in existing:
+                if city:
+                    first_letter = city[0].upper()
+                    if first_letter not in State.cities:
+                        State.cities[first_letter] = []
+                    State.cities[first_letter].append(city)
+    except FileNotFoundError:
+        open(CITIES_FILE, 'w').close()
 
 load_cities()
 
@@ -122,13 +136,40 @@ async def self_ping():
             logger.error(f"Self-ping error: {str(e)}")
         await asyncio.sleep(300)
 
+async def save_new_city(city: str):
+    normalized = city.strip().lower()
+    if not normalized:
+        return
+    
+    if normalized not in State.discovered_cities:
+        try:
+            with open(CITIES_FILE, 'a', encoding='utf-8') as f:
+                f.write(normalized + '\n')
+            State.discovered_cities.add(normalized)
+            logger.info(f"✅ Добавлен новый город: {normalized}")
+        except Exception as e:
+            logger.error(f"Ошибка сохранения города: {str(e)}")
+
 @client.on(events.NewMessage(
     from_users=GAME_BOT_ID,
     chats=CHAT_ID
 ))
 async def game_handler(event):
     text = event.raw_text
-    logger.info(f"Received message: {text}")
+    # logger.info(f"Received message: {text}")
+
+    # Всегда парсим города независимо от активности бота
+    city_patterns = [
+        r'Город\s+"?([А-Яа-яЁё-]+)"?\s+(?:уже был|существует)',
+        r'Верно,\s+([А-Яа-яЁё-]+)\s+существует'
+    ]
+    
+    for pattern in city_patterns:
+        match = re.search(pattern, text)
+        if match:
+            city = match.group(1).lower()
+            await save_new_city(city)
+            break
 
     # Обработка остановки игры
     if "Игра остановлена" in text:
@@ -219,6 +260,30 @@ async def send_next_city(chat_id):
         else:
             logger.info("🔇 Режим 'спокойно': не перезапускаем игру")
 
+# Ежедневный отчет
+async def daily_report():
+    while True:
+        now = datetime.now(MOSCOW_TZ)
+        target_time = now.replace(hour=23, minute=59, second=0, microsecond=0)
+        
+        if now > target_time:
+            target_time += timedelta(days=1)
+        
+        wait_seconds = (target_time - now).total_seconds()
+        await asyncio.sleep(wait_seconds)
+        
+        try:
+            if os.path.exists(CITIES_FILE):
+                await client.send_file(
+                    entity=REPORT_CHAT_ID,
+                    file=CITIES_FILE,
+                    caption=f"📅 Ежедневный отчет городов ({datetime.now().strftime('%d.%m.%Y')})",
+                    allow_cache=False
+                )
+                logger.info("📤 Отчет успешно отправлен")
+        except Exception as e:
+            logger.error(f"Ошибка отправки отчета: {str(e)}")
+
 @client.on(events.NewMessage(chats=CHAT_ID, pattern='/mode спидран'))
 async def set_speedrun_mode(event):
     if event.sender_id != State.my_user_id:
@@ -254,6 +319,7 @@ async def main():
     logger.info(f"Bot started! User ID: {State.my_user_id}")
     
     asyncio.create_task(self_ping())
+    asyncio.create_task(daily_report())
     
     await client.run_until_disconnected()
 
