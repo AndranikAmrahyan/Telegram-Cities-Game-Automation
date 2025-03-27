@@ -112,7 +112,21 @@ def load_cities():
     except FileNotFoundError:
         open(CITIES_FILE, 'w').close()
 
+def rewrite_cities_sorted():
+    try:
+        # Читаем все города, сортируем и перезаписываем файл
+        sorted_cities = sorted(State.discovered_cities, key=lambda x: x.lower())
+        
+        with open(CITIES_FILE, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(sorted_cities))
+
+        load_cities()  # Перезагружаем данные из файла
+        logger.info("🔁 Файл городов успешно перезаписан в отсортированном виде")
+    except Exception as e:
+        logger.error(f"Ошибка сортировки файла: {str(e)}")
+
 load_cities()
+rewrite_cities_sorted()
 
 # Инициализация Flask
 app = Flask(__name__)
@@ -273,19 +287,6 @@ async def send_next_city(chat_id):
             await client.send_message(chat_id, '/start@igravgorodabot', reply_to=TOPIC_ID)
         else:
             logger.info("🔇 Режим 'спокойно': не перезапускаем игру")
-
-def rewrite_cities_sorted():
-    try:
-        # Читаем все города, сортируем и перезаписываем файл
-        sorted_cities = sorted(State.discovered_cities, key=lambda x: x.lower())
-        
-        with open(CITIES_FILE, 'w', encoding='utf-8') as f:
-            f.write('\n'.join(sorted_cities))
-
-        load_cities()  # Перезагружаем данные из файла
-        logger.info("🔁 Файл городов успешно перезаписан в отсортированном виде")
-    except Exception as e:
-        logger.error(f"Ошибка сортировки файла: {str(e)}")
 
 # Ежедневный отчет
 async def daily_report():
