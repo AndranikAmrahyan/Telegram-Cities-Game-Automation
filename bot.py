@@ -146,7 +146,14 @@ async def save_new_city(city: str):
             with open(CITIES_FILE, 'a', encoding='utf-8') as f:
                 f.write(normalized + '\n')
             State.discovered_cities.add(normalized)
-            logger.info(f"✅ Добавлен новый город: {normalized}")
+            
+            # Обновляем State.cities
+            first_letter = normalized[0].upper()
+            if first_letter not in State.cities:
+                State.cities[first_letter] = []
+            if normalized not in State.cities[first_letter]:
+                State.cities[first_letter].append(normalized)
+                logger.info(f"✅ Добавлен новый город: {normalized}")
         except Exception as e:
             logger.error(f"Ошибка сохранения города: {str(e)}")
 
