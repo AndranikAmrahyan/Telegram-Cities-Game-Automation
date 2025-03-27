@@ -312,6 +312,13 @@ async def set_quiet_mode(event):
     State.mode = "спокойно"
     await event.reply('☕ Режим "спокойно" активирован: задержка ответов, ручной перезапуск')
 
+@client.on(events.NewMessage(chats=CHAT_ID, pattern='/cities'))
+async def get_cities_count(event):
+    if event.sender_id != State.my_user_id:
+        return
+    count = len(State.discovered_cities)
+    await event.reply(f"🏙 Всего городов в базе: {count}", reply_to=TOPIC_ID)
+
 @client.on(events.NewMessage(chats=CHAT_ID, pattern='/bot_on'))
 async def activate_bot(event):
     if event.sender_id != State.my_user_id:
