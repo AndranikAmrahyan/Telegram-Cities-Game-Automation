@@ -149,11 +149,13 @@ async def game_handler(event):
             logger.info(f"🔄 Обновляем букву на {new_letter} из сообщения об ошибке")
             State.current_letter = new_letter
         
-        if State.last_city:
-            try:
-                State.used_cities.remove(State.last_city)
-            except KeyError:
-                pass
+        # Если ошибка "уже был" - находим проблемный город в сообщении
+        if "уже был" in text:
+            city_match = re.search(r'Город\s+"?([А-Яа-яЁё-]+)"?\s+уже был', text)
+            if city_match:
+                invalid_city = city_match.group(1).strip().lower()
+                State.used_cities.add(invalid_city)
+                logger.info(f"🚫 Добавлен конфликтный город в used_cities: {invalid_city}")
         
         await send_next_city(event.chat_id)
         return
