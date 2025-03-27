@@ -140,6 +140,19 @@ async def game_handler(event):
         State.last_city = None
         return
 
+    # Обработка старта новой игры
+    if "Первый город будет" in text:
+        State.used_cities.clear()
+        State.current_letter = None
+        State.last_city = None
+        logger.info("🔄 Сброс состояния для новой игры")
+        
+        letter_match = re.search(r'на букву "([А-Яа-я])"', text)
+        if letter_match:
+            State.current_letter = letter_match.group(1).upper()
+            await send_next_city(event.chat_id)
+        return
+
     # Обработка ошибок с обновлением буквы
     if any(phrase in text for phrase in ["уже был", "не начинается с буквы"]):
         # Ищем новую букву в сообщении об ошибке
@@ -160,16 +173,11 @@ async def game_handler(event):
         await send_next_city(event.chat_id)
         return
 
-    # Поиск новой буквы
+    # Поиск новой буквы в процессе игры
     letter_match = re.search(r'на (?:букву|начинающийся с буквы) "([А-Яа-я])"', text)
     if letter_match:
         State.current_letter = letter_match.group(1).upper()
         await send_next_city(event.chat_id)
-    elif "Первый город будет" in text:
-        letter_match = re.search(r'на букву "([А-Яа-я])"', text)
-        if letter_match:
-            State.current_letter = letter_match.group(1).upper()
-            await send_next_city(event.chat_id)
 
 async def send_next_city(chat_id):
     if not State.current_letter:
