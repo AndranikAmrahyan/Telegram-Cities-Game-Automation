@@ -81,7 +81,7 @@ class State:
     current_letter = None
     last_city = None
     cities = {}
-    mode = "спидран"  # "спидран" | "спокойно"
+    mode = "спокойно"  # "спидран" | "спокойно"
     my_user_id = None
 
 # Загрузка городов из файла
