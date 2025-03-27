@@ -86,7 +86,7 @@ class State:
     used_cities = set()
     current_letter = None
     last_city = None
-    cities = {}
+    cities = {}  # { 'А': {'город1', 'город2'}, ... }
     discovered_cities = set()
     mode = "спокойно"  # "спидран" | "спокойно"
     my_user_id = None
@@ -103,8 +103,8 @@ def load_cities():
                 if city:
                     first_letter = city[0].upper()
                     if first_letter not in State.cities:
-                        State.cities[first_letter] = []
-                    State.cities[first_letter].append(city)
+                        State.cities[first_letter] = set()
+                    State.cities[first_letter].add(city)
     except FileNotFoundError:
         open(CITIES_FILE, 'w').close()
 
@@ -244,20 +244,16 @@ async def send_next_city(chat_id):
         logger.info(f"🕒 Режим 'спокойно': ждем {delay:.1f} сек.")
         await asyncio.sleep(delay)
 
-    city = None
-    available = State.cities.get(State.current_letter, [])
+    available = State.cities.get(State.current_letter, set())
+    unused = available - State.used_cities  # Быстрая разница множеств
     
-    for c in available:
-        if c not in State.used_cities:
-            city = c
-            break
-
-    if city:
+    if unused:
+        city = random.choice(list(unused)) if State.mode == "спокойно" else next(iter(unused))
         try:
             await client.send_message(
                 entity=chat_id,
                 message=city.capitalize(),
-                reply_to=TOPIC_ID  # Используем переменную темы
+                reply_to=TOPIC_ID
             )
             State.used_cities.add(city)
             State.last_city = city
