@@ -99,12 +99,16 @@ def load_cities():
             existing = {line.strip().lower() for line in f.readlines()}
             State.discovered_cities = existing.copy()
             
-            for city in existing:
+            # Пересоздаем структуру данных с учетом сортировки
+            sorted_cities = sorted(existing, key=lambda x: x.lower())
+            
+            for city in sorted_cities:
                 if city:
                     first_letter = city[0].upper()
                     if first_letter not in State.cities:
                         State.cities[first_letter] = set()
                     State.cities[first_letter].add(city)
+                    
     except FileNotFoundError:
         open(CITIES_FILE, 'w').close()
 
@@ -147,16 +151,20 @@ async def save_new_city(city: str):
                 f.write(normalized + '\n')
             State.discovered_cities.add(normalized)
 
+            # Проверяем количество новых городов перед сортировкой
+            if len(State.discovered_cities) % 100 == 0:
+                rewrite_cities_sorted()
+            
             # Добавляем город в использованные
             State.used_cities.add(normalized)
             
             # Обновляем State.cities
             first_letter = normalized[0].upper()
             if first_letter not in State.cities:
-                State.cities[first_letter] = []
-            if normalized not in State.cities[first_letter]:
-                State.cities[first_letter].append(normalized)
-                logger.info(f"✅ Добавлен новый город: {normalized}")
+                State.cities[first_letter] = set()
+            State.cities[first_letter].add(normalized)
+            logger.info(f"✅ Добавлен новый город: {normalized}")
+            
         except Exception as e:
             logger.error(f"Ошибка сохранения города: {str(e)}")
 
@@ -267,6 +275,18 @@ async def send_next_city(chat_id):
         else:
             logger.info("🔇 Режим 'спокойно': не перезапускаем игру")
 
+def rewrite_cities_sorted():
+    try:
+        # Читаем все города, сортируем и перезаписываем файл
+        sorted_cities = sorted(State.discovered_cities, key=lambda x: x.lower())
+        
+        with open(CITIES_FILE, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(sorted_cities))
+            
+        logger.info("🔁 Файл городов успешно перезаписан в отсортированном виде")
+    except Exception as e:
+        logger.error(f"Ошибка сортировки файла: {str(e)}")
+
 # Ежедневный отчет
 async def daily_report():
     while True:
@@ -281,6 +301,9 @@ async def daily_report():
         
         try:
             if os.path.exists(CITIES_FILE):
+                # Сортируем файл перед отправкой
+                rewrite_cities_sorted()
+                
                 total = len(State.discovered_cities)
                 await client.send_file(
                     entity=REPORT_CHAT_ID,
