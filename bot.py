@@ -77,7 +77,7 @@ TOPIC_ID = 266173              # ID темы/ветки чата (https://t.me/F
 GAME_BOT_ID = 1147621126       # ID игрового бота (@igravgorodabot)
 
 CITIES_FILE = 'cities.txt'
-REPORT_CHAT_ID = -1002571801416  # ID группы для отчетов
+REPORT_CHAT_ID = -4697646215  # ID группы для отчетов
 MOSCOW_TZ = pytz.timezone('Europe/Moscow')
 
 # Состояние бота
