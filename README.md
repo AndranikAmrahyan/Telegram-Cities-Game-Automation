@@ -8,7 +8,7 @@
 ```python
 RENDER_APP_URL = "https://ваш-рендер-проект.onrender.com"  # Для самопинга на сервере
 ```
-Настройка сессии:
+Настройка сессии в файле `bot.py`:
 ```python
 # Для сервера:
 SESSION_STRING = os.getenv("SESSION_STRING_SERVER")
