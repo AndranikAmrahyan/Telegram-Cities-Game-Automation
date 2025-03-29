@@ -7,6 +7,7 @@
 # Переменные в bot.py
 
 from telethon import TelegramClient, events, sessions
+from telethon.tl.types import User, PeerUser
 import asyncio
 import os
 import re
@@ -181,112 +182,141 @@ async def save_new_city(city: str):
         except Exception as e:
             logger.error(f"Ошибка сохранения города: {str(e)}")
 
+# Асинхронный Lock для синхронизации
+state_lock = asyncio.Lock()
+
 @client.on(events.NewMessage(
     from_users=GAME_BOT_ID,
     chats=CHAT_ID
 ))
 async def game_handler(event):
-    text = event.raw_text
-    # logger.info(f"Received message: {text}")
+    async with state_lock:  # Захватываем блокировку
+        text = event.raw_text
+        # logger.info(f"Received message: {text}")
+        
+        # Проверяем, адресовано ли сообщение нашему боту
+        # Получаем сообщение, на которое ответили
+        reply_message = await event.get_reply_message() if event.is_reply else None
 
-    # Всегда парсим города независимо от активности бота
-    city_patterns = [
-        r'Город\s+"?([А-Яа-яЁё\s-]+)"?\s+(?:уже был|существует)',
-        r'Верно,\s+([А-Яа-яЁё\s-]+)\s+существует',
-        r'Первый город будет\s+([А-Яа-яЁё\s-]+)\.'
-    ]
-    
-    for pattern in city_patterns:
-        match = re.search(pattern, text)
-        if match:
-            city = match.group(1).strip().lower()
-            await save_new_city(city)
-            break
+        # Проверяем, является ли это ответом на сообщение бота
+        is_reply_to_my_message = (
+            reply_message
+            and hasattr(reply_message, 'from_id')
+            and isinstance(reply_message.from_id, PeerUser)
+            and reply_message.from_id.user_id == State.my_user_id
+        )
 
-    # Обработка остановки игры
-    if "Игра остановлена" in text:
-        State.used_cities.clear()
-        State.current_letter = None
-        State.last_city = None
-        return
-
-    # Обработка старта новой игры
-    if "Первый город будет" in text:
-        State.used_cities.clear()
-        State.current_letter = None
-        State.last_city = None
-        logger.info("🔄 Сброс состояния для новой игры")
-
-        if not State.is_active:
+        if not is_reply_to_my_message:
+            logger.info(f"Игнорируем сообщение для другого игрока")
             return
         
-        letter_match = re.search(r'на букву "([А-Яа-я])"', text)
+        # Всегда парсим города независимо от активности бота
+        city_patterns = [
+            r'Город\s+"?([А-Яа-яЁё\s-]+)"?\s+(?:уже был|существует)',
+            r'Верно,\s+([А-Яа-яЁё\s-]+)\s+существует',
+            r'Первый город будет\s+([А-Яа-яЁё\s-]+)\.'
+        ]
+        
+        for pattern in city_patterns:
+            match = re.search(pattern, text)
+            if match:
+                city = match.group(1).strip().lower()
+                await save_new_city(city)
+                break
+    
+        # Обработка остановки игры
+        if "Игра остановлена" in text:
+            State.used_cities.clear()
+            State.current_letter = None
+            State.last_city = None
+            return
+        
+        # Обработка старта новой игры
+        if "Первый город будет" in text:
+            State.used_cities.clear()
+            State.current_letter = None
+            State.last_city = None
+            logger.info("🔄 Сброс состояния для новой игры")
+            
+            if not State.is_active:
+                return
+
+            if not is_reply_to_my_message:
+                logger.info(f"Игнорируем сообщение для другого игрока")
+                return
+            
+            letter_match = re.search(r'на букву "([А-Яа-я])"', text)
+            if letter_match:
+                State.current_letter = letter_match.group(1).upper()
+                await send_next_city(event.chat_id)
+            return
+        
+        if not State.is_active:
+            return
+
+        if not is_reply_to_my_message:
+            logger.info(f"Игнорируем сообщение для другого игрока")
+            return
+    
+        # Обработка ошибок с обновлением буквы
+        if any(phrase in text for phrase in ["уже был", "не начинается с буквы"]):
+            # Ищем новую букву в сообщении об ошибке
+            new_letter_match = re.search(r'с буквы\s*"([А-Яа-я])"', text)
+            if new_letter_match:
+                new_letter = new_letter_match.group(1).upper()
+                logger.info(f"🔄 Обновляем букву на {new_letter} из сообщения об ошибке")
+                State.current_letter = new_letter
+            
+            # Если ошибка "уже был" - находим проблемный город в сообщении
+            if "уже был" in text:
+                city_match = re.search(r'Город\s+"?([А-Яа-яЁё-]+)"?\s+уже был', text)
+                if city_match:
+                    invalid_city = city_match.group(1).strip().lower()
+                    State.used_cities.add(invalid_city)
+                    logger.info(f"🚫 Добавлен конфликтный город в used_cities: {invalid_city}")
+            
+            await send_next_city(event.chat_id)
+            return
+    
+        # Поиск новой буквы в процессе игры
+        letter_match = re.search(r'на (?:букву|начинающийся с буквы) "([А-Яа-я])"', text)
         if letter_match:
             State.current_letter = letter_match.group(1).upper()
             await send_next_city(event.chat_id)
-        return
-
-    if not State.is_active:
-        return
-
-    # Обработка ошибок с обновлением буквы
-    if any(phrase in text for phrase in ["уже был", "не начинается с буквы"]):
-        # Ищем новую букву в сообщении об ошибке
-        new_letter_match = re.search(r'с буквы\s*"([А-Яа-я])"', text)
-        if new_letter_match:
-            new_letter = new_letter_match.group(1).upper()
-            logger.info(f"🔄 Обновляем букву на {new_letter} из сообщения об ошибке")
-            State.current_letter = new_letter
-        
-        # Если ошибка "уже был" - находим проблемный город в сообщении
-        if "уже был" in text:
-            city_match = re.search(r'Город\s+"?([А-Яа-яЁё-]+)"?\s+уже был', text)
-            if city_match:
-                invalid_city = city_match.group(1).strip().lower()
-                State.used_cities.add(invalid_city)
-                logger.info(f"🚫 Добавлен конфликтный город в used_cities: {invalid_city}")
-        
-        await send_next_city(event.chat_id)
-        return
-
-    # Поиск новой буквы в процессе игры
-    letter_match = re.search(r'на (?:букву|начинающийся с буквы) "([А-Яа-я])"', text)
-    if letter_match:
-        State.current_letter = letter_match.group(1).upper()
-        await send_next_city(event.chat_id)
 
 async def send_next_city(chat_id):
-    if not State.current_letter:
-        return
-
-    # Задержка для режима "спокойно"
-    if State.mode == "спокойно":
-        delay = random.uniform(2.5, 5.5)
-        logger.info(f"🕒 Режим 'спокойно': ждем {delay:.1f} сек.")
-        await asyncio.sleep(delay)
-
-    available = State.cities.get(State.current_letter, set())
-    unused = available - State.used_cities  # Быстрая разница множеств
+    async with state_lock:  # Захватываем блокировку перед изменением состояния
+        if not State.current_letter:
+            return
     
-    if unused:
-        city = random.choice(list(unused)) if State.mode == "спокойно" else next(iter(unused))
-        try:
-            await client.send_message(
-                entity=chat_id,
-                message=city.capitalize(),
-                reply_to=TOPIC_ID
-            )
-            State.used_cities.add(city)
-            State.last_city = city
-        except Exception as e:
-            logger.error(f"Error sending city: {str(e)}")
-    else:
-        if State.mode == "спидран":
-            await client.send_message(chat_id, '/stop@igravgorodabot', reply_to=TOPIC_ID)
-            await asyncio.sleep(1)
-            await client.send_message(chat_id, '/start@igravgorodabot', reply_to=TOPIC_ID)
+        # Задержка для режима "спокойно"
+        if State.mode == "спокойно":
+            delay = random.uniform(2.5, 5.5)
+            logger.info(f"🕒 Режим 'спокойно': ждем {delay:.1f} сек.")
+            await asyncio.sleep(delay)
+    
+        available = State.cities.get(State.current_letter, set())
+        unused = available - State.used_cities  # Быстрая разница множеств
+        
+        if unused:
+            city = random.choice(list(unused)) if State.mode == "спокойно" else next(iter(unused))
+            try:
+                await client.send_message(
+                    entity=chat_id,
+                    message=city.capitalize(),
+                    reply_to=TOPIC_ID
+                )
+                State.used_cities.add(city)
+                State.last_city = city
+            except Exception as e:
+                logger.error(f"Error sending city: {str(e)}")
         else:
-            logger.info("🔇 Режим 'спокойно': не перезапускаем игру")
+            if State.mode == "спидран":
+                await client.send_message(chat_id, '/stop@igravgorodabot', reply_to=TOPIC_ID)
+                await asyncio.sleep(1)
+                await client.send_message(chat_id, '/start@igravgorodabot', reply_to=TOPIC_ID)
+            else:
+                logger.info("🔇 Режим 'спокойно': не перезапускаем игру")
 
 # Ежедневный отчет
 async def daily_report():
