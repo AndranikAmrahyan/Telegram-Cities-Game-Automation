@@ -5,3 +5,4 @@ flask==3.0.2
 aiohttp==3.9.3
 python-dotenv==1.0.1
 TgCrypto==1.2.5
+pytz==2024.1
