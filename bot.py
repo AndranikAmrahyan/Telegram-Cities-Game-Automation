@@ -205,10 +205,6 @@ async def game_handler(event):
             and isinstance(reply_message.from_id, PeerUser)
             and reply_message.from_id.user_id == State.my_user_id
         )
-
-        if not is_reply_to_my_message:
-            logger.info(f"Игнорируем сообщение для другого игрока")
-            return
         
         # Всегда парсим города независимо от активности бота
         city_patterns = [
