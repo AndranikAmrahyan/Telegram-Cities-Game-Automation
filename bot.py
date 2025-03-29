@@ -191,15 +191,15 @@ async def game_handler(event):
 
     # Всегда парсим города независимо от активности бота
     city_patterns = [
-        r'Город\s+"?([А-Яа-яЁё-]+)"?\s+(?:уже был|существует)',
-        r'Верно,\s+([А-Яа-яЁё-]+)\s+существует',
-        r'Первый город будет\s+([А-Яа-яЁё-]+)\.'
+        r'Город\s+"?([А-Яа-яЁё\s-]+)"?\s+(?:уже был|существует)',
+        r'Верно,\s+([А-Яа-яЁё\s-]+)\s+существует',
+        r'Первый город будет\s+([А-Яа-яЁё\s-]+)\.'
     ]
     
     for pattern in city_patterns:
         match = re.search(pattern, text)
         if match:
-            city = match.group(1).lower()
+            city = match.group(1).strip().lower()
             await save_new_city(city)
             break
 
