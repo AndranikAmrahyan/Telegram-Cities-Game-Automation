@@ -67,7 +67,7 @@ MOSCOW_TZ = pytz.timezone('Europe/Moscow')
 - Telegram API ключи
 - Файл [cities.txt](cities.txt) с городами
 
-**Важно!** Файл cities.txt должен быть в кодировке UTF-8.  
+**Важно!** Файл `cities.txt` должен быть в кодировке UTF-8.  
 Если возникают проблемы с кодировкой:  
 [Конвертер в UTF-8](https://subtitletools.com/convert-text-files-to-utf8-online)
 
